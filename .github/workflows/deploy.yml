@@ -1,0 +1,43 @@
+name: Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Instalar dependências
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm run build
+        env:
+          # URL/publishable são lidas no build p/ configurar o cliente Supabase.
+          # A secret é embutida como default do runtimeConfig pelo módulo (mesmo padrão do site).
+          SUPABASE_URL:             ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY:             ${{ secrets.SUPABASE_KEY }}
+          NUXT_SUPABASE_SECRET_KEY: ${{ secrets.NUXT_SUPABASE_SECRET_KEY }}
+
+      - name: Zipar output
+        run: |
+          zip -9 -r eventos.zip .output/ -x "**/*.map"
+          echo "Tamanho: $(du -sh eventos.zip | cut -f1)"
+
+      - name: Deploy
+        run: |
+          curl -f -X POST \
+            -F "package=@eventos.zip" \
+            "https://eventos.paintgobrasil.com/deploy.php?token=${{ secrets.DEPLOY_TOKEN }}"
