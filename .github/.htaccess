@@ -1,0 +1,23 @@
+DirectoryIndex disabled
+
+RewriteEngine On
+
+# https
+RewriteCond %{HTTPS} off
+RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
+
+# script de deploy
+RewriteRule ^deploy\.php$ - [L]
+
+# se o ARQUIVO existir fisicamente no public_html, serve direto
+RewriteCond %{REQUEST_FILENAME} -f
+RewriteRule ^ - [L]
+
+# nuxt https
+<IfModule mod_headers.c>
+    RequestHeader set X-Forwarded-Proto "https"
+    RequestHeader set X-Forwarded-Port "443"
+</IfModule>
+
+# proxy reverso para o node — porta do app de eventos (o site usa 3000; aqui 3100)
+RewriteRule ^(.*)$ http://127.0.0.1:3100/$1 [P,L]
